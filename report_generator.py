@@ -117,8 +117,9 @@ def generate_pdf_report(
     story.append(Spacer(1, 10))
     
     if recognized_text and recognized_text.strip():
+        formatted_text = recognized_text.replace('\n', '<br/>')
         text_paragraph = Paragraph(
-            f"<code>{recognized_text.replace('\\n', '<br/>')}</code>", 
+            f"<code>{formatted_text}</code>", 
             normal_style
         )
         story.append(text_paragraph)

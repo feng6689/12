@@ -1,6 +1,13 @@
 import os
 import sys
 
+def count_valid_words(text):
+    if not text or not text.strip():
+        return 0
+    words = text.split()
+    valid_words = [w for w in words if len(w) >= 2 and any(c.isalpha() for c in w)]
+    return len(valid_words)
+
 def main():
     print("=" * 50)
     print("照片修复与分析流程开始")
@@ -21,6 +28,7 @@ def main():
         
         original, restored, mask = restore_image(input_image, restored_image)
         print(f"图像修复完成，已保存为: {restored_image}")
+        print(f"检测到的划痕区域: {mask.sum() // 255} 像素")
         
     except Exception as e:
         print(f"图像修复失败: {e}")
@@ -29,14 +37,39 @@ def main():
         sys.exit(1)
     
     recognized_text = ""
+    text_source = ""
+    
     try:
         print("\n[步骤 2/5] OCR文字识别中...")
         from text_recognizer import recognize_text
         
-        recognized_text = recognize_text(restored_image)
+        print("\n正在识别原图...")
+        text_original = recognize_text(input_image)
+        count_original = count_valid_words(text_original)
+        
+        print("\n正在识别修复后图片...")
+        text_restored = recognize_text(restored_image)
+        count_restored = count_valid_words(text_restored)
+        
+        print("\n" + "-" * 40)
+        print(f"原图识别有效单词数: {count_original}")
+        print(f"修复图识别有效单词数: {count_restored}")
+        
+        if count_original >= count_restored and text_original:
+            recognized_text = text_original
+            text_source = "原图"
+        elif text_restored:
+            recognized_text = text_restored
+            text_source = "修复后图片"
+        else:
+            recognized_text = ""
+            text_source = "无"
+        
+        print(f"选择使用: {text_source}")
+        print("-" * 40)
         
         if recognized_text:
-            print("识别到的文字:")
+            print("\n识别到的文字:")
             print("-" * 40)
             print(recognized_text)
             print("-" * 40)
@@ -66,11 +99,13 @@ def main():
             print(f"情感倾向: {sentiment_result['sentiment']}")
             print(f"极性分数: {sentiment_result['polarity']:.4f}")
             print(f"主观性分数: {sentiment_result['subjectivity']:.4f}")
+            sentiment_result["has_text"] = True
             
         except Exception as e:
             print(f"情感分析失败: {e}")
             import traceback
             traceback.print_exc()
+            sentiment_result["has_text"] = False
         
         try:
             print("\n[步骤 4/5] 生成词云图中...")
@@ -119,6 +154,8 @@ def main():
         print(f"  - 词云图: {wordcloud_image}")
     if os.path.exists(pdf_report):
         print(f"  - PDF报告: {pdf_report}")
+    if os.path.exists("debug_mask.jpg"):
+        print(f"  - 调试用mask图像: debug_mask.jpg")
     
     print("\n流程执行完毕!")
 
